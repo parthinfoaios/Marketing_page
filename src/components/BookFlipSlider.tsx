@@ -24,7 +24,7 @@ import relatedImg9 from '@/assets/images/related_9.jpg';
 import relatedImg10 from '@/assets/images/related_10.jpg';
 import relatedImg11 from '@/assets/images/related_11.jpg';
 import relatedImg12 from '@/assets/images/related_12.jpg';
-
+const GOOGLE_SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbympyIPWIlSrt2SGTN4eVT3EHRWoEjn09hHGpTfQn_H6oHd6BNr1okVJlUBCDYy4qPC/exec';
 // Extend jsPDF interface for autoTable plugin
 declare module 'jspdf' {
   interface jsPDF {
@@ -84,6 +84,7 @@ const BookFlipSlider = () => {
   const [suggestions, setSuggestions] = useState<FormData[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(''); // This was missing in your code
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -129,46 +130,69 @@ const BookFlipSlider = () => {
     setSearchTerm('');
   };
 
-  const handleSave = () => {
+ const handleSave = async () => {
     if (!formData.restaurantName) {
       alert('Please enter a restaurant name.');
       return;
     }
     
     setIsSaving(true);
+    setSaveError('');
     
-    // Simulate saving process
-    setTimeout(() => {
+    try {
+      // Create a promise to handle the no-cors request
+      const saveToGoogleSheets = new Promise((resolve, reject) => {
+        fetch(GOOGLE_SHEETS_WEBHOOK, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            restaurantName: formData.restaurantName,
+            restaurantNumber: formData.restaurantNumber,
+            avgMissCallPerDay: formData.avgMissCallPerDay,
+            avgOrderValue: formData.avgOrderValue,
+            receptionStaffSalary: formData.receptionStaffSalary,
+            timestamp: new Date().toISOString(),
+          }),
+        })
+        .then(() => {
+          // With no-cors mode, we can't read the response
+          // So we assume it was successful if no network error occurred
+          resolve(true);
+        })
+        .catch(error => {
+          reject(error);
+        });
+      });
+
+      await saveToGoogleSheets;
+
       const existingData = localStorage.getItem('restaurantData');
       let dataToSave: FormData[] = [];
       if (existingData) {
         try {
           dataToSave = JSON.parse(existingData);
           if (!Array.isArray(dataToSave)) dataToSave = [];
-        } catch (error) {
-          console.error('Error parsing localStorage data:', error);
+        } catch {
           dataToSave = [];
         }
       }
       dataToSave.push(formData);
       localStorage.setItem('restaurantData', JSON.stringify(dataToSave));
       
-      // Set the newly saved data as the current data for the calculator
       setSearchedData(formData);
       setIsSaving(false);
       setSaveSuccess(true);
       
-      // Reset success message after 2 seconds
-      setTimeout(() => {
-        setSaveSuccess(false);
-      }, 2000);
-      
-      // Animate to the calculator page after a short delay
-      setTimeout(() => {
-        turnRight();
-      }, 500);
-    }, 1000);
+      setTimeout(() => setSaveSuccess(false), 2000);
+      setTimeout(() => turnRight(), 500);
+    } catch (error) {
+      console.error('Error saving to Google Sheets:', error);
+      setIsSaving(false);
+      setSaveError('Failed to save. Please try again.');
+    }
   };
+
 
   // Calculator calculations - use searched data if available, otherwise use form data
   const currentData = searchedData || formData;
@@ -400,7 +424,7 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
       )
     },
     {
-      image: relatedImg6,
+      image: relatedImg2,
       title: "Problems Faced by F&B Businesses",
       subtitle: "Challenges We Solve",
       gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
@@ -453,7 +477,7 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
       )
     },
     {
-      image: relatedImg4,
+      image: relatedImg6,
       title: "Solution Overview",
       subtitle: "InfoAIOS AI Voice Receptionist Features",
       gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
@@ -533,7 +557,7 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
       )
     },
     {
-      image: relatedImg6,
+      image: relatedImg2,
       title: "Automation & Integrations",
       subtitle: "Seamless Connectivity",
       gradient: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
@@ -1030,6 +1054,11 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
           <div className="success-message">
             <CheckCircle size={16} className="mr-2" />
             Data saved successfully!
+          </div>
+        )}
+        {saveError && (
+          <div className="error-message">
+            {saveError}
           </div>
         )}
       </div>
