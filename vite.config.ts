@@ -5,6 +5,9 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // YEH LINE ADD KARIYE GITHUB PAGES KE LIYE
+  base: '/Marketing_page/', 
+
   server: {
     host: "::",
     port: 8080,
