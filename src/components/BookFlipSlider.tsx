@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Share2 } from 'lucide-react';
+import { Search, Download, Share2, Calculator, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Users, Phone, DollarSign, FileText, Zap, Award, CheckCircle, ArrowRight, Star } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { autoTable, UserOptions } from 'jspdf-autotable';
@@ -11,9 +11,9 @@ import 'jspdf-autotable';
 import './BookFlipSlider.css';
 
 // Import related images for left side (content-related)
-import relatedImg1 from '@/assets/images/related_1.jpg';
-import relatedImg2 from '@/assets/images/related_2.jpg';
-import relatedImg3 from '@/assets/images/related_3.jpg';
+import relatedImg1 from '@/assets/images/related_12.jpg';
+import relatedImg2 from '@/assets/images/related_1.jpg';
+import relatedImg3 from '@/assets/images/related_2.jpg';
 import relatedImg4 from '@/assets/images/related_4.jpg';
 // import logoImg from '@/assets/images/logo.png'; // Logo for PDF - Uncomment this line when the logo file is added
 import relatedImg5 from '@/assets/images/related_5.jpg';
@@ -34,6 +34,7 @@ declare module 'jspdf' {
     };
   }
 }
+
 interface FormData {
   restaurantName: string;
   restaurantNumber: string;
@@ -43,9 +44,9 @@ interface FormData {
 }
 
 const plans = [
-  { name: 'Basic', price: 900 },
-  { name: 'Standard', price: 1200 },
-  { name: 'Premium', price: 1800 },
+  { name: 'Basic', price: 900, features: ['24/7 Call Answering', 'Order Taking', 'Basic Analytics'] },
+  { name: 'Standard', price: 1200, features: ['All Basic Features', 'Multi-language Support', 'Advanced Analytics', 'Priority Support'] },
+  { name: 'Premium', price: 1800, features: ['All Standard Features', 'Custom Voice Training', 'CRM Integration', 'Dedicated Account Manager'] },
 ];
 
 interface PageContent {
@@ -53,16 +54,20 @@ interface PageContent {
   title: string;
   subtitle?: string;
   content: React.ReactNode;
+  gradient?: string;
 }
 
 const BookFlipSlider = () => {
+  const totalPages = 14;
   const [currentPage, setCurrentPage] = useState(0);
   const [displayedImage, setDisplayedImage] = useState(0);
-  const [currentIndex, setCurrentIndex] = useState(14);
-  const [zIndices, setZIndices] = useState<number[]>(new Array(14).fill(0));
-  const [flipped, setFlipped] = useState<boolean[]>(new Array(14).fill(false));
+  // Initialize z-indices so first page is on top (highest z-index)
+  const [zIndices, setZIndices] = useState<number[]>(() => 
+    Array.from({ length: totalPages }, (_, i) => totalPages - i)
+  );
+  const [flipped, setFlipped] = useState<boolean[]>(new Array(totalPages).fill(false));
   const [isAnimating, setIsAnimating] = useState(false);
-  const zRef = useRef(1);
+  const zRef = useRef(totalPages);
   const calculatorRef = useRef<HTMLDivElement>(null);
 
   // Form state
@@ -73,10 +78,12 @@ const BookFlipSlider = () => {
     avgOrderValue: '',
     receptionStaffSalary: '',
   });
-  const [selectedPlan, setSelectedPlan] = useState('Basic');
+  const [selectedPlan, setSelectedPlan] = useState('Standard');
   const [searchTerm, setSearchTerm] = useState('');
   const [searchedData, setSearchedData] = useState<FormData | null>(null);
   const [suggestions, setSuggestions] = useState<FormData[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -127,31 +134,45 @@ const BookFlipSlider = () => {
       alert('Please enter a restaurant name.');
       return;
     }
-    const existingData = localStorage.getItem('restaurantData');
-    let dataToSave: FormData[] = [];
-    if (existingData) {
-      try {
-        dataToSave = JSON.parse(existingData);
-        if (!Array.isArray(dataToSave)) dataToSave = [];
-      } catch (error) {
-        console.error('Error parsing localStorage data:', error);
-        dataToSave = [];
-      }
-    }
-    dataToSave.push(formData);
-    localStorage.setItem('restaurantData', JSON.stringify(dataToSave));
     
-
-    // Set the newly saved data as the current data for the calculator
-    setSearchedData(formData);
-    turnRight(); // Animate back to the calculator page
+    setIsSaving(true);
+    
+    // Simulate saving process
+    setTimeout(() => {
+      const existingData = localStorage.getItem('restaurantData');
+      let dataToSave: FormData[] = [];
+      if (existingData) {
+        try {
+          dataToSave = JSON.parse(existingData);
+          if (!Array.isArray(dataToSave)) dataToSave = [];
+        } catch (error) {
+          console.error('Error parsing localStorage data:', error);
+          dataToSave = [];
+        }
+      }
+      dataToSave.push(formData);
+      localStorage.setItem('restaurantData', JSON.stringify(dataToSave));
+      
+      // Set the newly saved data as the current data for the calculator
+      setSearchedData(formData);
+      setIsSaving(false);
+      setSaveSuccess(true);
+      
+      // Reset success message after 2 seconds
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 2000);
+      
+      // Animate to the calculator page after a short delay
+      setTimeout(() => {
+        turnRight();
+      }, 500);
+    }, 1000);
   };
-
-
 
   // Calculator calculations - use searched data if available, otherwise use form data
   const currentData = searchedData || formData;
-  const planPrice = plans.find(p => p.name === selectedPlan)?.price || 900;
+  const planPrice = plans.find(p => p.name === selectedPlan)?.price || 1200;
   const missCallPerDay = parseFloat(currentData.avgMissCallPerDay) || 0;
   const orderValue = parseFloat(currentData.avgOrderValue) || 0;
   const staffSalary = parseFloat(currentData.receptionStaffSalary) || 0;
@@ -296,7 +317,7 @@ const BookFlipSlider = () => {
 
     // 3. Define the message for WhatsApp.
     const message = `Hello from InfoAIOS!
-We provide an AI-powered Voice Call Assistant that helps restaurants handle calls 24/7, never missing an order again. With our Savings Calculator, discover how much you can save by automating your call handling, reducing staffing costs, and improving order accuracy. Let’s help your restaurant grow with less effort!
+We provide an AI-powered Voice Call Assistant that helps restaurants handle calls 24/7, never missing an order again. With our Savings Calculator, discover how much you can save by automating your call handling, reducing staffing costs, and improving order accuracy. Let's help your restaurant grow with less effort!
 
 Please find the detailed savings report for *${restaurantName}* attached.`.trim();
 
@@ -308,220 +329,506 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
   const staticPages: PageContent[] = [
     {
       image: relatedImg1,
-      title: "InfoAIOS Voice",
-      subtitle: "Voice-to-Voice AI Solutions",
+      title: "InfoAIOS — AI Voice Call Assistant",
+      subtitle: "India's No.1 AI Voice Receptionist for Cafes & Restaurants",
+      gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       content: (
         <>
-          <h2>Never Miss a Call, Never Lose an Order.</h2>
-          <p>SaaS-Powered AI Assistant for Seamless Customer Engagement and Order Management</p>
+          <div className="hero-section">
+            <div className="hero-icon">
+              <Sparkles size={32} />
+            </div>
+            <div className="feature-list">
+              <div className="feature-item">
+                <CheckCircle className="feature-icon" size={16} />
+                <span>Answer Every Call 24×7</span>
+              </div>
+              <div className="feature-item">
+                <CheckCircle className="feature-icon" size={16} />
+                <span>Capture Every Order</span>
+              </div>
+              <div className="feature-item">
+                <CheckCircle className="feature-icon" size={16} />
+                <span>Zero Staff Needed</span>
+              </div>
+            </div>
+            <div className="contact-info">
+              <p><strong>Contact:</strong> +91 83204 85536</p>
+              <p><strong>Website:</strong> www.infoaios.ai</p>
+              <p><strong>Email:</strong> infoaios.ai@gmail.com</p>
+            </div>
+          </div>
         </>
       )
     },
     {
-      image: relatedImg2,
-      title: "Bridging the Order Management Gap",
-      subtitle: "Beyond POS: Addressing the Pre-Order Challenge",
+      image: relatedImg3,
+      title: "Executive Summary",
+      subtitle: "24×7 AI Voice Receptionist for Indian Cafes & Restaurants",
+      gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
       content: (
-        <div className="table-content">
-          <div className="table-row">
-            <div className="table-col">
-              <h4>Current POS Limitations</h4>
-              <ul>
-                <li>Handles Post-Order, Not Pre-Order</li>
-                <li>Busy Lines = Missed Calls</li>
-                <li>No Module Answers or Converts Callers</li>
-              </ul>
+        <>
+          <div className="summary-section">
+            <p className="summary-text">InfoAIOS ensures every incoming call is answered, orders and reservations are captured accurately, and customers receive instant confirmations via WhatsApp.</p>
+            <div className="key-outcomes">
+              <h4 className="outcomes-title">Key Outcomes:</h4>
+              <div className="outcomes-list">
+                <div className="outcome-item">
+                  <TrendingUp className="outcome-icon" size={16} />
+                  <span>Missed Calls → Missed Orders → Lost Revenue</span>
+                </div>
+                <div className="outcome-item">
+                  <Users className="outcome-icon" size={16} />
+                  <span>Reduce Staff Overload</span>
+                </div>
+                <div className="outcome-item">
+                  <DollarSign className="outcome-icon" size={16} />
+                  <span>Reduce Staffing Cost</span>
+                </div>
+                <div className="outcome-item">
+                  <Award className="outcome-icon" size={16} />
+                  <span>Increase Order Accuracy & Repeat Business</span>
+                </div>
+                <div className="outcome-item">
+                  <FileText className="outcome-icon" size={16} />
+                  <span>Provide Actionable Analytics to Owners</span>
+                </div>
+              </div>
             </div>
-            <div className="table-col">
-              <h4>InfoAIOS Voice Solution</h4>
-              <ul>
-                <li>24/7 AI Assistant</li>
-                <li>Never Misses a Call</li>
-                <li>Seamlessly Converts Inquiries into Orders</li>
-              </ul>
+          </div>
+        </>
+      )
+    },
+    {
+      image: relatedImg6,
+      title: "Problems Faced by F&B Businesses",
+      subtitle: "Challenges We Solve",
+      gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+      content: (
+        <div className="problems-section">
+          <div className="problems-list">
+            <div className="problem-item">
+              <div className="problem-icon">
+                <Phone size={20} />
+              </div>
+              <div className="problem-content">
+                <h4>Missed calls during peak hours</h4>
+                <p>→ Lost revenue</p>
+              </div>
+            </div>
+            <div className="problem-item">
+              <div className="problem-icon">
+                <DollarSign size={20} />
+              </div>
+              <div className="problem-content">
+                <h4>High cost & turnover for front-desk staff</h4>
+              </div>
+            </div>
+            <div className="problem-item">
+              <div className="problem-icon">
+                <FileText size={20} />
+              </div>
+              <div className="problem-content">
+                <h4>Human errors in order taking</h4>
+              </div>
+            </div>
+            <div className="problem-item">
+              <div className="problem-icon">
+                <Zap size={20} />
+              </div>
+              <div className="problem-content">
+                <h4>Time wasted answering repeated FAQ calls</h4>
+              </div>
+            </div>
+            <div className="problem-item">
+              <div className="problem-icon">
+                <FileText size={20} />
+              </div>
+              <div className="problem-content">
+                <h4>Lack of call records and insights for decisions</h4>
+              </div>
             </div>
           </div>
         </div>
       )
     },
     {
-      image: relatedImg3,
-      title: "Key Features & Benefits",
-      subtitle: "Voice-to-Voice AI Solutions",
-      content: (
-        <ul className="feature-list">
-          <li>Multilingual Greetings & Interaction (Hindi, English, Gujarati)</li>
-          <li>Repeats Specials & Sends WhatsApp Confirmations</li>
-          <li>Takes Orders & Books Tables Instantly</li>
-          <li>Zero Salary, Zero Leave, Zero Missed Call</li>
-        </ul>
-      )
-    },
-    {
       image: relatedImg4,
-      title: "Precision in Every Order",
-      subtitle: "InfoAIOS Voice",
+      title: "Solution Overview",
+      subtitle: "InfoAIOS AI Voice Receptionist Features",
+      gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
       content: (
-        <div className="feature-grid">
-          <div className="feature-item">
-            <h4>AI Voice Capture</h4>
-            <p>Captures Item Name, Quantity, Customizations Verbally</p>
-          </div>
-          <div className="feature-item">
-            <h4>Intelligent Processing</h4>
-            <p>Auto-Corrects Spelling, Prices & Add-ons</p>
-          </div>
-          <div className="feature-item">
-            <h4>Clean KOT Generation</h4>
-            <p>Kitchen Receives Clean KOT, Eliminating Wrong Orders</p>
+        <div className="solution-section">
+          <div className="feature-grid">
+            <div className="feature-card">
+              <div className="feature-card-icon">
+                <Phone size={24} />
+              </div>
+              <h4>24×7 Auto-Answering</h4>
+              <p>Take Orders & Share Menu</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-card-icon">
+                <Zap size={24} />
+              </div>
+              <h4>Track Delivery</h4>
+              <p>Solve Customer Queries</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-card-icon">
+                <FileText size={24} />
+              </div>
+              <h4>Natural-Language Order Taking</h4>
+              <p>Real-time WhatsApp Confirmation</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-card-icon">
+                <Users size={24} />
+              </div>
+              <h4>Multi-Language Support</h4>
+              <p>Gujarati / Hindi / English</p>
+            </div>
           </div>
         </div>
       )
     },
     {
       image: relatedImg5,
-      title: "Maximize Efficiency",
-      subtitle: "Cost-Effective AI Receptionist",
+      title: "Core Call Features",
+      subtitle: "Detailed Features",
+      gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
       content: (
-        <div className="savings-content">
-          <div className="cost-compare">
-            <div className="cost-item">
-              <h4>Human Receptionists</h4>
-              <p>2 x ₹18k-20k/month each</p>
+        <div className="core-features-section">
+          <div className="core-features-list">
+            <div className="core-feature-item">
+              <div className="core-feature-number">1</div>
+              <div className="core-feature-content">
+                <h4>Instant Pickup</h4>
+                <p>Brand-scripted greeting with customizable voice</p>
+              </div>
             </div>
-            <div className="cost-item highlight">
-              <h4>InfoAIOS AI Assistant</h4>
-              <p>1 x ₹3.5k/month</p>
+            <div className="core-feature-item">
+              <div className="core-feature-number">2</div>
+              <div className="core-feature-content">
+                <h4>Intent Detection</h4>
+                <p>Identifies order, reservation, query, or complaint</p>
+              </div>
             </div>
-          </div>
-          <div className="savings-box">
-            <h4>Total Annual Savings</h4>
-            <p className="big-number">₹3,90,000 - ₹4,38,000</p>
+            <div className="core-feature-item">
+              <div className="core-feature-number">3</div>
+              <div className="core-feature-content">
+                <h4>Confirm & Route</h4>
+                <p>Confirms order details, reads price & ETA, forwards to kitchen/POS</p>
+              </div>
+            </div>
+            <div className="core-feature-item">
+              <div className="core-feature-number">4</div>
+              <div className="core-feature-content">
+                <h4>WhatsApp Slip</h4>
+                <p>Sends itemised order slip and payment link (optional)</p>
+              </div>
+            </div>
           </div>
         </div>
       )
     },
     {
       image: relatedImg6,
-      title: "Seamless CRM Integration",
-      subtitle: "& Automated Marketing",
+      title: "Automation & Integrations",
+      subtitle: "Seamless Connectivity",
+      gradient: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
       content: (
-        <div className="crm-flow">
-          <div className="flow-item">
-            <h4>Voice Call</h4>
-            <p>Capture numbers, orders, reservations instantly</p>
-          </div>
-          <div className="flow-arrow">→</div>
-          <div className="flow-item">
-            <h4>CRM Data</h4>
-            <p>Auto-save directly to your CRM</p>
-          </div>
-          <div className="flow-arrow">→</div>
-          <div className="flow-item">
-            <h4>Marketing Action</h4>
-            <p>Build retargeting & loyalty campaigns</p>
+        <div className="automation-section">
+          <div className="automation-list">
+            <div className="automation-item">
+              <div className="automation-icon">
+                <Zap size={20} />
+              </div>
+              <div className="automation-content">
+                <h4>POS / CRM API Integration</h4>
+                <p>Push orders and customer data</p>
+              </div>
+            </div>
+            <div className="automation-item">
+              <div className="automation-icon">
+                <Phone size={20} />
+              </div>
+              <div className="automation-content">
+                <h4>Delivery App Sync</h4>
+                <p>Zomato/Swiggy for own delivery management</p>
+              </div>
+            </div>
+            <div className="automation-item">
+              <div className="automation-icon">
+                <Users size={20} />
+              </div>
+              <div className="automation-content">
+                <h4>Staff Notifications</h4>
+                <p>WhatsApp or SMS alerts for big orders or issues</p>
+              </div>
+            </div>
+            <div className="automation-item">
+              <div className="automation-icon">
+                <FileText size={20} />
+              </div>
+              <div className="automation-content">
+                <h4>Daily Reports</h4>
+                <p>Peak-time analytics, missed-call elimination stats</p>
+              </div>
+            </div>
           </div>
         </div>
       )
     },
     {
       image: relatedImg7,
-      title: "Live Café Stats",
-      subtitle: "Driving Growth with AI Voice",
+      title: "Sample Call Flow",
+      subtitle: "Step-by-Step Process",
+      gradient: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
       content: (
-        <div className="stats-grid">
-          <div className="stat-item">
-            <span className="stat-number">1200</span>
-            <span className="stat-label">Calls Handled</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">₹1.2L</span>
-            <span className="stat-label">Extra Sales Generated</span>
-          </div>
-          <div className="stat-item highlight">
-            <span className="stat-number">43x</span>
-            <span className="stat-label">Return on Investment</span>
+        <div className="call-flow-section">
+          <div className="call-flow-container">
+            <div className="call-flow-step">
+              <div className="step-number">1</div>
+              <div className="step-content">
+                <h4>Caller dials restaurant number</h4>
+              </div>
+              <div className="step-arrow">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+            <div className="call-flow-step">
+              <div className="step-number">2</div>
+              <div className="step-content">
+                <h4>Greeting</h4>
+                <p>"Welcome to [Brand]. How can I help you?"</p>
+              </div>
+              <div className="step-arrow">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+            <div className="call-flow-step">
+              <div className="step-number">3</div>
+              <div className="step-content">
+                <h4>Intent Detection</h4>
+                <p>"Order karna hai" → Pickup or Delivery?</p>
+              </div>
+              <div className="step-arrow">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+            <div className="call-flow-step">
+              <div className="step-number">4</div>
+              <div className="step-content">
+                <h4>Capture Details</h4>
+                <p>Name, phone, items, quantity, address</p>
+              </div>
+              <div className="step-arrow">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+            <div className="call-flow-step">
+              <div className="step-number">5</div>
+              <div className="step-content">
+                <h4>Confirm & Send</h4>
+                <p>Confirm Pricing & ETA, Send WhatsApp Slip</p>
+              </div>
+              <div className="step-arrow">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+            <div className="call-flow-step">
+              <div className="step-number">6</div>
+              <div className="step-content">
+                <h4>Push to System</h4>
+                <p>Push to POS/Kitchen with unique order ID</p>
+              </div>
+            </div>
           </div>
         </div>
       )
     },
     {
       image: relatedImg8,
-      title: "Transparent Pricing",
-      subtitle: "Flat-Fee Model",
+      title: "Multilingual Voice Scripts",
+      subtitle: "Sample Scripts",
+      gradient: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
       content: (
-        <ul className="pricing-list">
-          <li><strong>No Per-Minute Charges</strong> - Single transparent monthly fee</li>
-          <li><strong>Unlimited Outlets</strong> - Add all locations under one dashboard</li>
-          <li><strong>Perfect for Chains</strong> - Ideal for cloud kitchens, food-court counters</li>
-        </ul>
+        <div className="scripts-section">
+          <div className="script-card">
+            <div className="script-header">
+              <h4>English (Formal)</h4>
+            </div>
+            <div className="script-content">
+              <p>"Hello! You have reached [Restaurant Name]. Would you like to place an order, make a reservation, or ask about the menu?"</p>
+            </div>
+          </div>
+          <div className="script-card">
+            <div className="script-header">
+              <h4>Hindi (Friendly)</h4>
+            </div>
+            <div className="script-content">
+              <p>"Namaste! Aap [Restaurant Name] mein hain. Order, reservation ya menu dekhna?"</p>
+            </div>
+          </div>
+          <div className="script-card">
+            <div className="script-header">
+              <h4>Gujarati (Casual)</h4>
+            </div>
+            <div className="script-content">
+              <p>"Kem cho! Aap [Restaurant Name] ma aavya cho. Order karva chho ke reservation?"</p>
+            </div>
+          </div>
+        </div>
       )
     },
     {
       image: relatedImg9,
-      title: "How InfoAIOS Voice Works",
-      subtitle: "Simple 4-Step Process",
+      title: "Dashboard & Reports",
+      subtitle: "What You Get",
+      gradient: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)",
       content: (
-        <div className="steps-list">
-          <div className="step"><span>1</span> Share Prices & Menu Layout</div>
-          <div className="step"><span>2</span> Choose Existing Phone</div>
-          <div className="step"><span>3</span> Forward Voice Tone to Cloud Number</div>
-          <div className="step"><span>4</span> AI Learns Menu - Starts Taking Calls Next Day</div>
+        <div className="dashboard-section">
+          <div className="dashboard-features">
+            <div className="dashboard-feature">
+              <div className="dashboard-icon">
+                <FileText size={20} />
+              </div>
+              <h4>Real-time call log</h4>
+              <p>with transcription & recording</p>
+            </div>
+            <div className="dashboard-feature">
+              <div className="dashboard-icon">
+                <TrendingUp size={20} />
+              </div>
+              <h4>Order reconciliation</h4>
+              <p>AI vs kitchen/POS report</p>
+            </div>
+            <div className="dashboard-feature">
+              <div className="dashboard-icon">
+                <Zap size={20} />
+              </div>
+              <h4>Peak hour heatmap</h4>
+              <p>and weekly trends</p>
+            </div>
+            <div className="dashboard-feature">
+              <div className="dashboard-icon">
+                <Award size={20} />
+              </div>
+              <h4>Missed-call reduction rate</h4>
+              <p>and SLA stats</p>
+            </div>
+            <div className="dashboard-feature">
+              <div className="dashboard-icon">
+                <Users size={20} />
+              </div>
+              <h4>Customer database</h4>
+              <p>with repeat-caller tag</p>
+            </div>
+          </div>
         </div>
       )
     },
     {
       image: relatedImg10,
-      title: "Seamless POS Integration",
-      subtitle: "No Replacement Needed",
+      title: "ROI Example",
+      subtitle: "1-Page Calculation",
+      gradient: "linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)",
       content: (
-        <>
-          <p className="highlight-text">AI Feeds Clean Orders & Table Bookings into Your Current Petpooja POS</p>
-          <div className="integration-features">
-            <div>API or WhatsApp Print</div>
-            <div>Preserves Existing Workflows & Hardware</div>
-            <div>Effortless Setup & Synchronization</div>
+        <div className="roi-section">
+          <div className="roi-comparison">
+            <div className="roi-card lost">
+              <h4>Monthly Lost Revenue (Pre-AI)</h4>
+              <div className="roi-calculation">
+                <span>500 missed × 40% × ₹350</span>
+                <span className="roi-result">= <strong>₹70,000</strong></span>
+              </div>
+            </div>
+            <div className="roi-card recovered">
+              <h4>Recovered with AI</h4>
+              <div className="roi-calculation">
+                <span>450 orders × 40% × ₹350</span>
+                <span className="roi-result">= <strong>₹63,000</strong></span>
+              </div>
+            </div>
           </div>
-        </>
+          <div className="roi-savings">
+            <h4>Staff Savings</h4>
+            <p>₹15,000–25,000/month</p>
+            <div className="roi-highlight">
+              <p>Positive ROI in 1–2 months</p>
+            </div>
+          </div>
+        </div>
       )
     },
     {
       image: relatedImg11,
-      title: "Experience Zero Missed Calls",
-      subtitle: "& Boost Sales Next Week",
+      title: "FAQs",
+      subtitle: "Frequently Asked Questions",
+      gradient: "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)",
       content: (
-        <>
-          <p className="guarantee-text">If InfoAIOS Voice doesn't add ₹750k to your sales next week, walk away - no questions asked.</p>
-          <div className="cta-steps">
-            <div className="cta-item">Instant Signup via Mobile</div>
-            <div className="cta-item">Book Onboarding Call</div>
+        <div className="faq-section">
+          <div className="faq-list">
+            <div className="faq-item">
+              <h4>Q: Will AI understand local accents?</h4>
+              <p>A: Yes — tuned for Gujarati, Hindi, and Indian-English accents.</p>
+            </div>
+            <div className="faq-item">
+              <h4>Q: Can I keep my old number?</h4>
+              <p>A: Yes — we support number porting subject to telecom regulations.</p>
+            </div>
+            <div className="faq-item">
+              <h4>Q: What if AI cannot handle a call?</h4>
+              <p>A: It will escalate to human staff or schedule a callback.</p>
+            </div>
+            <div className="faq-item">
+              <h4>Q: Is customer data safe?</h4>
+              <p>A: Yes — encrypted in transit and rest, role-based access controls.</p>
+            </div>
           </div>
-        </>
+        </div>
       )
     },
     {
       image: relatedImg12,
-      title: "Transform Your Business",
-      subtitle: "InfoAIOS Voice",
+      title: "Next Steps & Contact",
+      subtitle: "Quick Checklist to Start Today",
+      gradient: "linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)",
       content: (
-        <div className="transform-grid">
-          <div className="transform-item">
-            <h4>PAIN</h4>
-            <p>Every unanswered call is lost revenue</p>
+        <>
+          <div className="steps-section">
+            <div className="steps-list">
+              <div className="step-item">
+                <div className="step-number">1</div>
+                <p>Schedule a live demo (Call / Zoom)</p>
+              </div>
+              <div className="step-item">
+                <div className="step-number">2</div>
+                <p>Share menu (CSV/Excel) & business hours</p>
+              </div>
+              <div className="step-item">
+                <div className="step-number">3</div>
+                <p>Decide on number porting vs new virtual number</p>
+              </div>
+              <div className="step-item">
+                <div className="step-number">4</div>
+                <p>Choose package (Starter / Growth / Enterprise)</p>
+              </div>
+              <div className="step-item">
+                <div className="step-number">5</div>
+                <p>Sign agreement & schedule onboarding date</p>
+              </div>
+            </div>
           </div>
-          <div className="transform-item">
-            <h4>SOLUTION</h4>
-            <p>AI-Powered Engagement</p>
+          <div className="contact-info">
+            <h3>InfoAIOS</h3>
+            <p>Sun Sky Park, Ring Road, Bopal, Ahmedabad</p>
+            <p><strong>Contact:</strong> +91 83204 85536</p>
+            <p><strong>Web:</strong> www.infoaios.ai</p>
+            <p><strong>Email:</strong> infoaios.ai@gmail.com</p>
           </div>
-          <div className="transform-item">
-            <h4>ROI</h4>
-            <p>Increased Efficiency & Revenue</p>
-          </div>
-          <div className="transform-item highlight">
-            <h4>RISK-FREE TRIAL</h4>
-            <p>Start today. No commitment, just results.</p>
-          </div>
-        </div>
+        </>
       )
     },
   ];
@@ -531,6 +838,7 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
     image: relatedImg5,
     title: "Your Savings Calculator",
     subtitle: currentData.restaurantName || "Results",
+    gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     content: (
       <div className="book-calculator" ref={calculatorRef}>
         {/* Search Bar */}
@@ -574,7 +882,7 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
         
         <div className="plan-select-book">
           <Label>Select Plan</Label>
-          <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+          <Select  value={selectedPlan} onValueChange={setSelectedPlan}>
             <SelectTrigger>
               <SelectValue placeholder="Select a plan" />
             </SelectTrigger>
@@ -586,6 +894,16 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
               ))}
             </SelectContent>
           </Select>
+          {plans.find(p => p.name === selectedPlan) && (
+            <div className="plan-features">
+              <h5>Plan Features:</h5>
+              <ul>
+                {plans.find(p => p.name === selectedPlan)?.features.map((feature, i) => (
+                  <li key={i}>{feature}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="calc-results">
@@ -646,6 +964,7 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
     image: relatedImg4, // Or any other relevant image
     title: "Add Restaurant Data",
     subtitle: "Input Details for Savings Calculation",
+    gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
     content: (
       <div className="book-form">
         <div className="form-group">
@@ -694,12 +1013,30 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
           <Label htmlFor="receptionStaffSalary">Reception Staff Salary (₹/month)</Label>
           <Input id="receptionStaffSalary" name="receptionStaffSalary" type="number" value={formData.receptionStaffSalary} onChange={handleFormChange} placeholder="e.g., 18000" />
         </div>
-        <Button onClick={handleSave} className="save-btn">Save Data</Button>
+        <Button onClick={handleSave} className="save-btn" disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <div className="spinner"></div>
+              Saving...
+            </>
+          ) : (
+            <>
+              <Calculator size={16} className="mr-2" />
+              Calculate Savings
+            </>
+          )}
+        </Button>
+        {saveSuccess && (
+          <div className="success-message">
+            <CheckCircle size={16} className="mr-2" />
+            Data saved successfully!
+          </div>
+        )}
       </div>
     )
   };
 
-  const pages: PageContent[] = [calculatorPage, formPage, ...staticPages];
+  const pages: PageContent[] = [...staticPages, formPage, calculatorPage];
 
   const isFirstPage = currentPage === 0;
   const isLastPage = currentPage === pages.length - 1;
@@ -708,35 +1045,24 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
     if (isLastPage || isAnimating) return;
     setIsAnimating(true);
 
-    setCurrentIndex((prev) => {
-      let newIndex = prev;
-      
-      if (newIndex >= 1) {
-        newIndex = prev - 1;
-      } else {
-        newIndex = pages.length - 1;
-        setFlipped(new Array(pages.length).fill(false));
-        setZIndices(new Array(pages.length).fill(0));
-        zRef.current = 1;
-      }
+    // Flip the current page to reveal the next one
+    const pageToFlip = currentPage;
+    
+    setFlipped((prevFlipped) => {
+      const newFlipped = [...prevFlipped];
+      newFlipped[pageToFlip] = true;
+      return newFlipped;
+    });
 
-      setFlipped((prevFlipped) => {
-        const newFlipped = [...prevFlipped];
-        newFlipped[newIndex] = true;
-        return newFlipped;
-      });
-
-      zRef.current++;
-      setZIndices((prevZ) => {
-        const newZ = [...prevZ];
-        newZ[newIndex] = zRef.current;
-        return newZ;
-      });
-
-      return newIndex;
+    // Give flipped page higher z-index so it animates on top
+    zRef.current++;
+    setZIndices((prevZ) => {
+      const newZ = [...prevZ];
+      newZ[pageToFlip] = zRef.current + totalPages;
+      return newZ;
     });
     
-    const nextPage = Math.min(currentPage + 1, pages.length - 1);
+    const nextPage = currentPage + 1;
     setCurrentPage(nextPage);
     
     // Delay image change until flip animation is halfway done
@@ -744,56 +1070,39 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
       setDisplayedImage(nextPage);
       setIsAnimating(false);
     }, 400);
-  }, [isLastPage, isAnimating, pages.length, currentPage]);
+  }, [isLastPage, isAnimating, currentPage, totalPages]);
 
   const turnLeft = useCallback(() => {
     if (isFirstPage || isAnimating) return;
     setIsAnimating(true);
 
-    const prevPage = Math.max(currentPage - 1, 0);
-
+    const prevPage = currentPage - 1;
+    
     // Change image immediately when going back
     setDisplayedImage(prevPage);
     
-    setCurrentIndex((prev) => {
-      let newIndex = prev;
-      
-      if (newIndex < pages.length) {
-        newIndex = prev + 1;
-      } else {
-        newIndex = 1;
-        const newFlipped = new Array(pages.length).fill(true);
-        newFlipped[0] = false;
-        setFlipped(newFlipped);
-        
-        const newZ = pages.map((_, i) => pages.length + 1 - i);
-        setZIndices(newZ);
-        return newIndex;
-      }
-
-      setFlipped((prevFlipped) => {
-        const newFlipped = [...prevFlipped];
-        newFlipped[newIndex - 1] = false;
-        return newFlipped;
-      });
-
-      setTimeout(() => {
-        setZIndices((prevZ) => {
-          const newZ = [...prevZ];
-          newZ[newIndex - 1] = 0;
-          return newZ;
-        });
-      }, 350);
-
-      return newIndex;
+    // Unflip the previous page to go back
+    setFlipped((prevFlipped) => {
+      const newFlipped = [...prevFlipped];
+      newFlipped[prevPage] = false;
+      return newFlipped;
     });
+
+    // Reset z-index of unflipped page after animation
+    setTimeout(() => {
+      setZIndices((prevZ) => {
+        const newZ = [...prevZ];
+        newZ[prevPage] = totalPages - prevPage;
+        return newZ;
+      });
+    }, 350);
     
     setCurrentPage(prevPage);
     
     setTimeout(() => {
       setIsAnimating(false);
     }, 400);
-  }, [isFirstPage, isAnimating, pages.length, currentPage]);
+  }, [isFirstPage, isAnimating, currentPage, totalPages]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -809,13 +1118,17 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [turnLeft, turnRight]);
 
-
-
   return (
     <div className="book-section">
-      <p className="credit-text">
-        Created by <a href="https://infoaios.ai" target="_blank" rel="noopener noreferrer">infoaios.ai</a>
-      </p>
+      <div className="book-header">
+        <div className="logo-container">
+          <Sparkles size={24} className="logo-icon" />
+          <span className="logo-text">InfoAIOS</span>
+        </div>
+        <p className="credit-text">
+          Created by <a href="https://infoaios.ai" target="_blank" rel="noopener noreferrer">infoaios.ai</a>
+        </p>
+      </div>
       
       <div className="book-container">
         {/* Left side - Static related image display */}
@@ -824,6 +1137,7 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
             className="left-image"
             style={{ backgroundImage: `url(${pages[displayedImage].image})` }}
           />
+          <div className="page-overlay" style={{ background: pages[displayedImage].gradient }}></div>
         </div>
         
         {/* Right side - Flipping pages with content */}
@@ -859,15 +1173,21 @@ Please find the detailed savings report for *${restaurantName}* attached.`.trim(
           className={`nav-btn ${isFirstPage ? 'disabled' : ''}`}
           disabled={isFirstPage}
         >
-          ← Prev
+          <ChevronLeft size={18} />
+          Prev
         </button>
-        <span className="page-indicator">{currentPage + 1} / {pages.length}</span>
+        <div className="page-indicator">
+          <span className="current-page">{currentPage + 1}</span>
+          <span className="divider">/</span>
+          <span className="total-pages">{pages.length}</span>
+        </div>
         <button 
           onClick={turnRight} 
           className={`nav-btn ${isLastPage ? 'disabled' : ''}`}
           disabled={isLastPage}
         >
-          Next →
+          Next
+          <ChevronRight size={18} />
         </button>
       </div>
     </div>
